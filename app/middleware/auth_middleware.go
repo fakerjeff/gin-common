@@ -109,10 +109,6 @@ func (middleware *AuthMiddleware) AllowAfterAbortContext() bool {
 	return false
 }
 
-func (middleware *AuthMiddleware) Name() string {
-	return "auth_middleware"
-}
-
 func GetAuthedUserInfo(ctx *gin.Context) (userInfo map[string]interface{}, err error) {
 	// 获取用户信息
 	value, exists := ctx.Get("userInfo")
@@ -159,8 +155,4 @@ func (middleware *DeactivatedAbortMiddleware) DeniedBeforeAbortContext() bool {
 
 func (middleware *DeactivatedAbortMiddleware) AllowAfterAbortContext() bool {
 	return false
-}
-
-func (middleware *DeactivatedAbortMiddleware) Name() string {
-	return "deactivated_abort_middleware"
 }

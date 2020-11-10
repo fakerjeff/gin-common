@@ -46,7 +46,3 @@ func (controller *ChangePasswordController) changePassword(context *gin.Context)
 func (controller *ChangePasswordController) DoRequest(context *gin.Context) (data *resp.Response, err error) {
 	return controller.changePassword(context)
 }
-
-func (controller *ChangePasswordController) Name() string {
-	return "change_password_controller"
-}

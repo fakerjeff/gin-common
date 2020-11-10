@@ -19,12 +19,10 @@ type MiddleWare interface {
 	After(context *gin.Context) (err error)
 	DeniedBeforeAbortContext() bool
 	AllowAfterAbortContext() bool
-	Name() string
 }
 
 type Controller interface {
 	DoRequest(context *gin.Context) (data *resp.Response, err error)
-	Name() string
 }
 
 func getErrRender(err error) resp.RenderFunc {

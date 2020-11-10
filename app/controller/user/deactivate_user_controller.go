@@ -42,7 +42,3 @@ func (controller *DeActivateUserController) deActivateUser(context *gin.Context)
 func (controller *DeActivateUserController) DoRequest(context *gin.Context) (data *resp.Response, err error) {
 	return controller.deActivateUser(context)
 }
-
-func (controller *DeActivateUserController) Name() string {
-	return "deactivate_user_controller"
-}

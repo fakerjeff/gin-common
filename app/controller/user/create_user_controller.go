@@ -45,7 +45,3 @@ func (controller *CreateUserController) createUser(context *gin.Context) (data *
 func (controller *CreateUserController) DoRequest(context *gin.Context) (data *resp.Response, err error) {
 	return controller.createUser(context)
 }
-
-func (controller *CreateUserController) Name() string {
-	return "create_user_controller"
-}

@@ -45,7 +45,3 @@ func (controller *GetUserInfoController) getUserInfo(context *gin.Context) (data
 func (controller *GetUserInfoController) DoRequest(context *gin.Context) (data *resp.Response, err error) {
 	return controller.getUserInfo(context)
 }
-
-func (controller *GetUserInfoController) Name() string {
-	return "get_userinfo_controller"
-}

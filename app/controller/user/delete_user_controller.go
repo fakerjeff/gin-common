@@ -38,7 +38,3 @@ func (controller *DeleteUserController) deleteUser(context *gin.Context) (data *
 func (controller *DeleteUserController) DoRequest(context *gin.Context) (data *resp.Response, err error) {
 	return controller.deleteUser(context)
 }
-
-func (controller *DeleteUserController) Name() string {
-	return "edit_user_controller"
-}

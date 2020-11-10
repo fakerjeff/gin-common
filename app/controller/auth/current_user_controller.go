@@ -35,7 +35,3 @@ func (controller *CurrentUserController) currentUser(context *gin.Context) (data
 func (controller *CurrentUserController) DoRequest(context *gin.Context) (data *resp.Response, err error) {
 	return controller.currentUser(context)
 }
-
-func (controller *CurrentUserController) Name() string {
-	return "current_user_controller"
-}

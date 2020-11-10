@@ -42,7 +42,3 @@ func (controller *ActivateUserController) activateUser(context *gin.Context) (da
 func (controller *ActivateUserController) DoRequest(context *gin.Context) (data *resp.Response, err error) {
 	return controller.activateUser(context)
 }
-
-func (controller *ActivateUserController) Name() string {
-	return "activate_user_controller"
-}

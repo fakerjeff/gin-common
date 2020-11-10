@@ -41,7 +41,3 @@ func (controller *LogoutController) logout(context *gin.Context) (data *resp.Res
 func (controller *LogoutController) DoRequest(context *gin.Context) (data *resp.Response, err error) {
 	return controller.logout(context)
 }
-
-func (controller *LogoutController) Name() string {
-	return "logout_controller"
-}

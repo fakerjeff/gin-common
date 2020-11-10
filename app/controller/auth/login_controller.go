@@ -32,7 +32,3 @@ func (controller *LoginController) login(context *gin.Context) (data *resp.Respo
 func (controller *LoginController) DoRequest(context *gin.Context) (data *resp.Response, err error) {
 	return controller.login(context)
 }
-
-func (controller *LoginController) Name() string {
-	return "login_controller"
-}
