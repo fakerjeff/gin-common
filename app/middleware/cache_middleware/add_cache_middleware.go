@@ -3,6 +3,7 @@ package cache_middleware
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -130,8 +131,12 @@ func (middleware *AddCacheMiddleware) After(context *gin.Context) (err error) {
 	}
 
 	if !middleware.cached {
-		var cacheKey string
+		var cacheKey, cacheName string
 		cacheKey, err = middleware.getCacheKey(context)
+		if err != nil {
+			return
+		}
+		cacheName, err = middleware.getContextCacheName(context)
 		if err != nil {
 			return
 		}
@@ -139,7 +144,7 @@ func (middleware *AddCacheMiddleware) After(context *gin.Context) (err error) {
 		if err != nil {
 			return
 		}
-		err = middleware.cache.Set(cacheKey, middleware.respBuffer.String(), expires)
+		err = middleware.cache.HSet(fmt.Sprintf("cache:%s", cacheName), cacheKey, middleware.respBuffer.String(), expires)
 		if err != nil {
 			return
 		}
