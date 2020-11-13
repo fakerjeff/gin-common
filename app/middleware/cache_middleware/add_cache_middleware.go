@@ -148,7 +148,7 @@ func (middleware *AddCacheMiddleware) After(context *gin.Context) (err error) {
 }
 
 func (middleware *AddCacheMiddleware) DeniedBeforeAbortContext() bool {
-	return false
+	return true
 }
 
 func (middleware *AddCacheMiddleware) AllowAfterAbortContext() bool {
