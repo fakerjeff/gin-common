@@ -13,7 +13,7 @@ import (
 	"com.github.gin-common/app/exception"
 	"com.github.gin-common/app/service"
 	"com.github.gin-common/common/exceptions"
-	"com.github.gin-common/common/tools/jwt_tool"
+	"com.github.gin-common/tools/jwt_tool"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-redis/redis/v8"

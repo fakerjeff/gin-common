@@ -14,11 +14,21 @@ import (
 type ControllerFunc func() Controller
 type MiddlewareFunc func() MiddleWare
 
+type MiddlewareOption interface {
+	Apply(context *gin.Context)
+}
+
 type MiddleWare interface {
 	Before(context *gin.Context) (err error)
 	After(context *gin.Context) (err error)
 	DeniedBeforeAbortContext() bool
 	AllowAfterAbortContext() bool
+}
+
+func WithOption(context *gin.Context, opts ...MiddlewareOption) {
+	for _, opt := range opts {
+		opt.Apply(context)
+	}
 }
 
 type Controller interface {
@@ -78,12 +88,16 @@ func processMiddlewareFunc(phase int, middleware MiddleWare, context *gin.Contex
 	}
 	if processFunc != nil {
 		err := processFunc(context)
-		if err != nil && allow {
-			r := getErrRender(err)
-			r(context)
-			context.Abort()
-			return
+		if err != nil {
+			if allow {
+				r := getErrRender(err)
+				r(context)
+				context.Abort()
+				return
+			}
+			gin_logger.Log.Error(err.Error())
 		}
+
 	}
 	goOn = true
 	return

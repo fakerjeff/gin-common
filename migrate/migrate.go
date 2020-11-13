@@ -2,7 +2,7 @@ package migrate
 
 import (
 	"com.github.gin-common/app/model"
-	"com.github.gin-common/common/tools/db_tool"
+	"com.github.gin-common/tools/db_tool"
 )
 
 func doMigrate(dst ...interface{}) {

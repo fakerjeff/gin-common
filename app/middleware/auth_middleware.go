@@ -10,7 +10,7 @@ import (
 
 	"com.github.gin-common/app/service"
 
-	"com.github.gin-common/common/tools/jwt_tool"
+	"com.github.gin-common/tools/jwt_tool"
 
 	"com.github.gin-common/app/model"
 

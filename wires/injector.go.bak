@@ -7,56 +7,60 @@ import (
 	"github.com/google/wire"
 )
 
-var createUserControllerInjectSet = wire.NewSet(provideCreateUserForm, provideCreateUserController, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var sessionInjectSet = wire.NewSet(provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession)
+var redisInjectSet = wire.NewSet(provideRedisRdb, provideRedisContext)
+
+var userServiceInjectSet = wire.NewSet(sessionInjectSet, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var createUserControllerInjectSet = wire.NewSet(provideCreateUserForm, userServiceInjectSet, provideCreateUserController)
 
 func CreateUserController() controllers.Controller {
 	wire.Build(createUserControllerInjectSet)
 	return nil
 }
 
-var editUserControllerInjectSet = wire.NewSet(provideUpdateUserForm, provideEditUserController, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var editUserControllerInjectSet = wire.NewSet(provideUpdateUserForm, provideEditUserController, userServiceInjectSet)
 
 func UpdateUserController() controllers.Controller {
 	wire.Build(editUserControllerInjectSet)
 	return nil
 }
 
-var deleteUserControllerInjectSet = wire.NewSet(provideDeleteUserController, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var deleteUserControllerInjectSet = wire.NewSet(provideDeleteUserController, userServiceInjectSet)
 
 func DeleteUserController() controllers.Controller {
 	wire.Build(deleteUserControllerInjectSet)
 	return nil
 }
 
-var activateUserControllerInjectSet = wire.NewSet(provideActivateUserController, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var activateUserControllerInjectSet = wire.NewSet(provideActivateUserController, userServiceInjectSet)
 
 func ActivateUserController() controllers.Controller {
 	wire.Build(activateUserControllerInjectSet)
 	return nil
 }
 
-var deActivateUserControllerInjectSet = wire.NewSet(provideDeActivateUserController, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var deActivateUserControllerInjectSet = wire.NewSet(provideDeActivateUserController, userServiceInjectSet)
 
 func DeActivateUserController() controllers.Controller {
 	wire.Build(deActivateUserControllerInjectSet)
 	return nil
 }
 
-var getUserInfoControllerInjectSet = wire.NewSet(provideGetUserInfoController, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var getUserInfoControllerInjectSet = wire.NewSet(provideGetUserInfoController, userServiceInjectSet)
 
 func GetUserInfoController() controllers.Controller {
 	wire.Build(getUserInfoControllerInjectSet)
 	return nil
 }
 
-var changePasswordControllerInjectSet = wire.NewSet(provideChangePasswordController, provideChangePassForm, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var changePasswordControllerInjectSet = wire.NewSet(provideChangePasswordController, provideChangePassForm, userServiceInjectSet)
 
 func ChangePasswordController() controllers.Controller {
 	wire.Build(changePasswordControllerInjectSet)
 	return nil
 }
 
-var authMiddlewareInjectSet = wire.NewSet(provideAuthMiddleware, provideRedisRdb, provideRedisContext, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var authMiddlewareInjectSet = wire.NewSet(provideAuthMiddleware, redisInjectSet, userServiceInjectSet)
 
 func AuthMiddleware() controllers.MiddleWare {
 	wire.Build(authMiddlewareInjectSet)
@@ -68,14 +72,16 @@ func DeactivatedAbortMiddleware() controllers.MiddleWare {
 	return nil
 }
 
-var loginControllerInjectSet = wire.NewSet(provideLoginController, provideLoginForm, provideRedisContext, provideRedisRdb, provideUserService, provideAuthService, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)), wire.Bind(new(service.AuthService), new(*impl.AuthServiceImpl)))
+var authServiceInjectSet = wire.NewSet(provideAuthService, redisInjectSet, userServiceInjectSet, wire.Bind(new(service.AuthService), new(*impl.AuthServiceImpl)))
+
+var loginControllerInjectSet = wire.NewSet(provideLoginController, provideLoginForm, authServiceInjectSet)
 
 func LoginController() controllers.Controller {
 	wire.Build(loginControllerInjectSet)
 	return nil
 }
 
-var logoutControllerInjectSet = wire.NewSet(provideLogoutController, provideRedisContext, provideRedisRdb, provideUserService, provideAuthService, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)), wire.Bind(new(service.AuthService), new(*impl.AuthServiceImpl)))
+var logoutControllerInjectSet = wire.NewSet(provideLogoutController, authServiceInjectSet)
 
 func LogoutController() controllers.Controller {
 	wire.Build(logoutControllerInjectSet)

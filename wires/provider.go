@@ -7,7 +7,7 @@ import (
 
 	"com.github.gin-common/common/controllers"
 
-	"com.github.gin-common/common/tools/redis_tool"
+	"com.github.gin-common/tools/redis_tool"
 
 	"github.com/go-redis/redis/v8"
 
@@ -22,7 +22,7 @@ import (
 
 	"com.github.gin-common/app/form"
 
-	"com.github.gin-common/common/tools/db_tool"
+	"com.github.gin-common/tools/db_tool"
 
 	"com.github.gin-common/util"
 	"gorm.io/gorm"

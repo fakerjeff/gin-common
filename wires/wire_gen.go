@@ -128,22 +128,30 @@ func CurrentUserController() controllers.Controller {
 
 // injector.go.bak:
 
-var createUserControllerInjectSet = wire.NewSet(provideCreateUserForm, provideCreateUserController, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var sessionInjectSet = wire.NewSet(provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession)
 
-var editUserControllerInjectSet = wire.NewSet(provideUpdateUserForm, provideEditUserController, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var redisInjectSet = wire.NewSet(provideRedisRdb, provideRedisContext)
 
-var deleteUserControllerInjectSet = wire.NewSet(provideDeleteUserController, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var userServiceInjectSet = wire.NewSet(sessionInjectSet, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
 
-var activateUserControllerInjectSet = wire.NewSet(provideActivateUserController, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var createUserControllerInjectSet = wire.NewSet(provideCreateUserForm, userServiceInjectSet, provideCreateUserController)
 
-var deActivateUserControllerInjectSet = wire.NewSet(provideDeActivateUserController, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var editUserControllerInjectSet = wire.NewSet(provideUpdateUserForm, provideEditUserController, userServiceInjectSet)
 
-var getUserInfoControllerInjectSet = wire.NewSet(provideGetUserInfoController, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var deleteUserControllerInjectSet = wire.NewSet(provideDeleteUserController, userServiceInjectSet)
 
-var changePasswordControllerInjectSet = wire.NewSet(provideChangePasswordController, provideChangePassForm, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var activateUserControllerInjectSet = wire.NewSet(provideActivateUserController, userServiceInjectSet)
 
-var authMiddlewareInjectSet = wire.NewSet(provideAuthMiddleware, provideRedisRdb, provideRedisContext, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, provideUserService, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)))
+var deActivateUserControllerInjectSet = wire.NewSet(provideDeActivateUserController, userServiceInjectSet)
 
-var loginControllerInjectSet = wire.NewSet(provideLoginController, provideLoginForm, provideRedisContext, provideRedisRdb, provideUserService, provideAuthService, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)), wire.Bind(new(service.AuthService), new(*impl.AuthServiceImpl)))
+var getUserInfoControllerInjectSet = wire.NewSet(provideGetUserInfoController, userServiceInjectSet)
 
-var logoutControllerInjectSet = wire.NewSet(provideLogoutController, provideRedisContext, provideRedisRdb, provideUserService, provideAuthService, provideGormSessionTimeout, provideTimeoutGormContext, provideTimeoutGormSession, wire.Bind(new(service.UserService), new(*impl.UserServiceImpl)), wire.Bind(new(service.AuthService), new(*impl.AuthServiceImpl)))
+var changePasswordControllerInjectSet = wire.NewSet(provideChangePasswordController, provideChangePassForm, userServiceInjectSet)
+
+var authMiddlewareInjectSet = wire.NewSet(provideAuthMiddleware, redisInjectSet, userServiceInjectSet)
+
+var authServiceInjectSet = wire.NewSet(provideAuthService, redisInjectSet, userServiceInjectSet, wire.Bind(new(service.AuthService), new(*impl.AuthServiceImpl)))
+
+var loginControllerInjectSet = wire.NewSet(provideLoginController, provideLoginForm, authServiceInjectSet)
+
+var logoutControllerInjectSet = wire.NewSet(provideLogoutController, authServiceInjectSet)
