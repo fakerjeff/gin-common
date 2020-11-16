@@ -29,13 +29,6 @@ func (p *RedisCache) Get(key string, ptrValue *string) error {
 	return nil
 }
 
-func (p *RedisCache) HSet(key string, field string, value interface{}, expires time.Duration) error {
-	if err := p.rdb.HSet(p.ctx, key, field, value).Err(); err != nil {
-		return err
-	}
-	return nil
-}
-
 type RedisItemMapGetter map[string]string
 
 func (g RedisItemMapGetter) Get(key string, ptrValue *string) error {

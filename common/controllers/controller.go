@@ -14,7 +14,7 @@ import (
 type ControllerFunc func() Controller
 type MiddlewareFunc func() MiddleWare
 
-type MiddlewareOption interface {
+type ContextOption interface {
 	Apply(context *gin.Context)
 }
 
@@ -25,7 +25,7 @@ type MiddleWare interface {
 	AllowAfterAbortContext() bool
 }
 
-func WithOption(context *gin.Context, opts ...MiddlewareOption) {
+func WithOption(context *gin.Context, opts ...ContextOption) {
 	for _, opt := range opts {
 		opt.Apply(context)
 	}

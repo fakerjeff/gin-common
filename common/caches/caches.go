@@ -13,7 +13,6 @@ type Getter interface {
 type CacheProvider interface {
 	Getter
 	GetMulti(keys ...string) (Getter, error)
-	HSet(key string, field string, value interface{}, expires time.Duration) error
 	Set(key string, value interface{}, expires time.Duration) error
 	Delete(key string) error
 	DeleteMulti(keys ...string) error
