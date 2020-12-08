@@ -36,6 +36,7 @@ type cacheOption struct {
 	cacheProvider     CacheProvider        // 缓存Provider
 	expires           time.Duration        // 缓存过期时间
 	serializer        util.Serializer      //缓存值序列化器
+	condition         func() bool          //条件函数
 	sync              bool                 //缓存值更新否同步
 }
 
@@ -65,6 +66,12 @@ func (b CacheBloomFilterOption) apply(cacheOption *cacheOption) {
 
 type RedisCacheProvideOption RedisCache
 
+type ConditionFuncOption func() bool
+
+func (c ConditionFuncOption) apply(cacheOption *cacheOption) {
+	cacheOption.condition = c
+}
+
 func (c RedisCacheProvideOption) apply(cacheOption *cacheOption) {
 	provider := RedisCache(c)
 	cacheOption.cacheProvider = &provider
@@ -92,8 +99,8 @@ type CacheOptions interface {
 	apply(cacheOption *cacheOption)
 }
 
-func CacheEnable(process func() (interface{}, error), condition func() bool, ptr interface{}, opts ...CacheOptions) (r interface{}, e error) {
-	// 缓存装饰方法,在存在缓存时读取缓存，不存在缓存时，从原方法中获取结果，并且将结果存如缓存（支持开启布隆过滤器、开启同步更新缓存）
+func CacheEnable(process func() (interface{}, error), ptr interface{}, opts ...CacheOptions) (r interface{}, e error) {
+	// 缓存装饰方法,在存在缓存时读取缓存，不存在缓存时，从原方法中获取结果，并且将结果存如缓存（支持开启布隆过滤器（防穿透）、开启同步更新缓存）
 	// @args
 	// process 被装饰的处理方法
 	// condition 缓存准入条件，若返回为false，则不缓存
@@ -103,11 +110,11 @@ func CacheEnable(process func() (interface{}, error), condition func() bool, ptr
 	// e 返回异常
 
 	// 缓存准入条件,若不符合则直接返回原方法
-	if !condition() {
+	options := newCacheOption(opts...)
+	if options.condition != nil && !options.condition() {
 		r, e = process()
 		return
 	}
-	options := newCacheOption(opts...)
 	key := options.key
 	// 若没配置缓存key则直接返回原函数结果
 	if key == "" {
@@ -122,6 +129,7 @@ func CacheEnable(process func() (interface{}, error), condition func() bool, ptr
 		if filter == nil {
 			return process()
 		}
+		// 如果布隆过滤器中不存在请求key，则直接返回异常（判定为异常请求）
 		exists, err := filter.Exists(options.bloomFilterOption.Key(), key)
 		if err != nil {
 			e = err
@@ -132,19 +140,33 @@ func CacheEnable(process func() (interface{}, error), condition func() bool, ptr
 			return
 		}
 	}
-
+	// 若布隆过滤器中发现缓存，则尝试从缓存中获取结果
 	var result string
 	e = options.cacheProvider.Get(key, &result)
 	if e != nil {
 		return
 	}
+	//若未获取结果，则尝试使用原处理方法获取结果，并更新缓存
 	if result == "" {
-		// Todo： 此过程(更新缓存)考虑加锁，因为在多goroutine或分布式环境下同一时间相同key可能出现多次计算（分布式锁）（实现方式建议：zk或etcd）
-		e = options.cacheProvider.Get(key, &result)
-		if e != nil {
-			return
-		}
-		if result == "" {
+		// 如果开启了同步模式，则需要给更新缓存的操作加锁（针对缓存key）
+		if options.sync {
+			// Todo： 此过程(更新缓存)考虑加锁，因为在多goroutine或分布式环境下同一时间相同key可能出现多次计算（分布式锁）
+			// Todo：（实现方式建议：zk或etcd）
+			e = options.cacheProvider.Get(key, &result)
+			if e != nil {
+				return
+			}
+			if result == "" {
+				r, e = process()
+				if e != nil {
+					return
+				}
+				e = options.cacheProvider.Set(key, r, options.expires)
+				if e != nil {
+					return
+				}
+			}
+		} else { //	反之则不加锁，直接请求原处理方法并更新缓存
 			r, e = process()
 			if e != nil {
 				return
@@ -164,17 +186,67 @@ func CacheEnable(process func() (interface{}, error), condition func() bool, ptr
 	return
 }
 
-func CachePut(process func() (interface{}, error), condition func() bool, opts ...CacheOptions) (r interface{}, e error) {
+func CachePut(process func() (interface{}, error), opts ...CacheOptions) (r interface{}, e error) {
+	// 缓存装饰方法,执行处理方法，并将处理的结果写入缓存中
+	// @args
+	// process 被装饰的处理方法
+	// condition 缓存准入条件，若返回为false，则不缓存
+	// opts 缓存配置
+	// @return
+	// r 返回值
+	// e 返回异常
 	r, e = process()
+	options := newCacheOption(opts...)
 
-	if !condition() {
+	if options.condition != nil && !options.condition() {
 		return
+	}
+
+	key := options.key
+	// 若没配置缓存key则直接返回原函数结果
+	if key == "" {
+		return
+	}
+	// 添加处理函数的结果在缓存
+	e = options.cacheProvider.Set(key, r, options.expires)
+	if e != nil {
+		return
+	}
+	// 判断是否开启布隆过滤器(防穿透)
+	// 若开启则先检验key是否存在于布隆过滤器中，若不存在则添加到布隆过滤器中
+	if options.bloomFilterOption.Enable() {
+		// 若开启了布隆过滤器,但并未指定布隆过滤器，则直接返回原函数结果
+		filter := options.bloomFilterOption.Filter()
+		if filter == nil {
+			return
+		}
+		// 如果布隆过滤器中不存在请求key，则将key添加到布容过滤器中
+		exists, err := filter.Exists(options.bloomFilterOption.Key(), key)
+		if err != nil {
+			e = err
+			return
+		}
+		if !exists {
+			_, e = filter.Add(options.bloomFilterOption.Key(), key)
+			if e != nil {
+				return
+			}
+		}
 	}
 	return
 }
 
-func CacheEvict(f func() (interface{}, error), cacheKeys ...string) {
-
+func CacheEvict(process func() (interface{}, error), cacheProvider CacheProvider, cacheKeys ...string) (r interface{}, e error) {
+	// 缓存装饰方法,删除缓存
+	// @args
+	// process 被装饰的处理方法
+	// opts 缓存配置
+	// @return
+	// r 返回值
+	// e 返回异常
+	r, e = process()
+	e = cacheProvider.DeleteMulti(cacheKeys...)
+	return
 }
 
 func Any() bool {
