@@ -9,6 +9,11 @@ import (
 	"go.uber.org/zap"
 )
 
+type Serializer interface {
+	Serialize(value interface{}) ([]byte, error)
+	Deserialize(byt []byte, ptr interface{}) (err error)
+}
+
 type SerializeTool struct {
 	logger zap.Logger
 }

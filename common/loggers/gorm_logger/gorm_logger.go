@@ -45,10 +45,14 @@ func (l *GormLogger) LogMode(level logger.LogLevel) logger.Interface {
 	} else {
 		ll = zap.ErrorLevel
 	}
-	l.logger = l.logger.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
+	var options = make([]zap.Option, len(l.config.Options))
+	copy(options, l.config.Options)
+
+	options = append(options, zap.WrapCore(func(core zapcore.Core) zapcore.Core {
 		syncer := zapcore.AddSync(l.config.Writer)
 		return zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), syncer, ll)
 	}))
+	l.logger = l.logger.WithOptions(options...)
 	l.config.LogLevel = ll
 	return l
 }

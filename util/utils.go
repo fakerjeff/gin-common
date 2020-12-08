@@ -1,8 +1,10 @@
 package util
 
 import (
+	"fmt"
 	"io"
 	"os"
+	"strconv"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -63,5 +65,17 @@ func GetLogLevel(level string) zapcore.Level {
 		return logLevel
 	} else {
 		return zap.ErrorLevel
+	}
+}
+
+func IsBool(val interface{}) (bool, error) {
+	switch val := val.(type) {
+	case int64:
+		return val != 0, nil
+	case string:
+		return strconv.ParseBool(val)
+	default:
+		err := fmt.Errorf("unexpected type=%T for Bool", val)
+		return false, err
 	}
 }

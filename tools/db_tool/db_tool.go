@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"strconv"
 	"sync"
@@ -24,13 +25,14 @@ var once sync.Once
 var db *gorm.DB
 
 func getMySqlDsn() string {
+
 	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=%s",
 		util.GetDefaultEnv("DATABASE_USER", ""),
 		util.GetDefaultEnv("DATABASE_PASSWORD", ""),
 		util.GetDefaultEnv("DATABASE_HOST", "127.0.0.1"),
 		util.GetDefaultEnv("DATABASE_PORT", "3306"),
 		util.GetDefaultEnv("DATABASE_NAME", ""),
-		util.GetDefaultEnv("DATABASE_LOC", "Asia%2FShanghai"))
+		url.QueryEscape(util.GetDefaultEnv("LOCATION", "Asia/Shanghai")))
 }
 
 func getGormConfig(writer io.Writer, options ...zap.Option) (*gorm.Config, error) {
