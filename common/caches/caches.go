@@ -93,8 +93,16 @@ type CacheOptions interface {
 }
 
 func CacheEnable(process func() (interface{}, error), condition func() bool, ptr interface{}, opts ...CacheOptions) (r interface{}, e error) {
-	// 缓存装饰方法
-	// 缓存准入条件
+	// 缓存装饰方法,在存在缓存时读取缓存，不存在缓存时，从原方法中获取结果，并且将结果存如缓存（支持开启布隆过滤器、开启同步更新缓存）
+	// @args
+	// process 被装饰的处理方法
+	// condition 缓存准入条件，若返回为false，则不缓存
+	// opts 缓存配置
+	// @return
+	// r 返回值
+	// e 返回异常
+
+	// 缓存准入条件,若不符合则直接返回原方法
 	if !condition() {
 		r, e = process()
 		return
@@ -125,21 +133,26 @@ func CacheEnable(process func() (interface{}, error), condition func() bool, ptr
 		}
 	}
 
-	// Todo： 此过程(更新缓存)考虑加锁，因为在多goroutine或分布式环境下同一时间相同key可能出现多次计算（分布式锁）（实现方式建议：zk或etcd）
 	var result string
 	e = options.cacheProvider.Get(key, &result)
 	if e != nil {
 		return
 	}
-
 	if result == "" {
-		r, e = process()
+		// Todo： 此过程(更新缓存)考虑加锁，因为在多goroutine或分布式环境下同一时间相同key可能出现多次计算（分布式锁）（实现方式建议：zk或etcd）
+		e = options.cacheProvider.Get(key, &result)
 		if e != nil {
 			return
 		}
-		e = options.cacheProvider.Set(key, r, options.expires)
-		if e != nil {
-			return
+		if result == "" {
+			r, e = process()
+			if e != nil {
+				return
+			}
+			e = options.cacheProvider.Set(key, r, options.expires)
+			if e != nil {
+				return
+			}
 		}
 	}
 	// 此处需要将查出来的结果反序列化
@@ -160,7 +173,7 @@ func CachePut(process func() (interface{}, error), condition func() bool, opts .
 	return
 }
 
-func CacheEvict(f func() error, opts ...CacheOptions) {
+func CacheEvict(f func() (interface{}, error), cacheKeys ...string) {
 
 }
 
