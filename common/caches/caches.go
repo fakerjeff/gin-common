@@ -1,7 +1,6 @@
 package caches
 
 import (
-	"errors"
 	"time"
 
 	"com.github.gin-common/util"
@@ -24,10 +23,20 @@ type CacheProvider interface {
 	Replace(key string, value interface{}, expires time.Duration) error
 }
 
+type CacheError string
+
+func newCacheError(s string) CacheError {
+	return CacheError(s)
+}
+
+func (e CacheError) Error() string {
+	return string(e)
+}
+
 var (
-	ErrCacheMiss    = errors.New("cache: key not found")
-	ErrNotStored    = errors.New("cache: not stored")
-	ErrInvalidValue = errors.New("cache: invalid value")
+	ErrCacheMiss    = newCacheError("cache: key not found")
+	ErrNotStored    = newCacheError("cache: not stored")
+	ErrInvalidValue = newCacheError("cache: invalid value")
 )
 
 type cacheOption struct {
@@ -130,13 +139,14 @@ func CacheEnable(process func() (interface{}, error), ptr interface{}, opts ...C
 			return process()
 		}
 		// 如果布隆过滤器中不存在请求key，则直接返回异常（判定为异常请求）
-		exists, err := filter.Exists(options.bloomFilterOption.Key(), key)
-		if err != nil {
-			e = err
+		var exists bool
+		exists, e = filter.Exists(options.bloomFilterOption.Key(), key)
+		if e != nil {
+			e = newCacheError(e.Error())
 			return
 		}
 		if !exists {
-			e = errors.New("item is not found")
+			e = newCacheError("item is not found")
 			return
 		}
 	}
@@ -144,6 +154,7 @@ func CacheEnable(process func() (interface{}, error), ptr interface{}, opts ...C
 	var result string
 	e = options.cacheProvider.Get(key, &result)
 	if e != nil {
+		e = newCacheError(e.Error())
 		return
 	}
 	//若未获取结果，则尝试使用原处理方法获取结果，并更新缓存
@@ -154,6 +165,7 @@ func CacheEnable(process func() (interface{}, error), ptr interface{}, opts ...C
 			// Todo：（实现方式建议：zk或etcd）
 			e = options.cacheProvider.Get(key, &result)
 			if e != nil {
+				e = newCacheError(e.Error())
 				return
 			}
 			if result == "" {
@@ -163,6 +175,7 @@ func CacheEnable(process func() (interface{}, error), ptr interface{}, opts ...C
 				}
 				e = options.cacheProvider.Set(key, r, options.expires)
 				if e != nil {
+					e = newCacheError(e.Error())
 					return
 				}
 			}
@@ -173,6 +186,7 @@ func CacheEnable(process func() (interface{}, error), ptr interface{}, opts ...C
 			}
 			e = options.cacheProvider.Set(key, r, options.expires)
 			if e != nil {
+				e = newCacheError(e.Error())
 				return
 			}
 		}
@@ -180,6 +194,7 @@ func CacheEnable(process func() (interface{}, error), ptr interface{}, opts ...C
 	// 此处需要将查出来的结果反序列化
 	e = options.serializer.Deserialize([]byte(result), ptr)
 	if e != nil {
+		e = newCacheError(e.Error())
 		return
 	}
 	r = ptr
@@ -210,6 +225,7 @@ func CachePut(process func() (interface{}, error), opts ...CacheOptions) (r inte
 	// 添加处理函数的结果在缓存
 	e = options.cacheProvider.Set(key, r, options.expires)
 	if e != nil {
+		e = newCacheError(e.Error())
 		return
 	}
 	// 判断是否开启布隆过滤器(防穿透)
@@ -221,14 +237,16 @@ func CachePut(process func() (interface{}, error), opts ...CacheOptions) (r inte
 			return
 		}
 		// 如果布隆过滤器中不存在请求key，则将key添加到布容过滤器中
-		exists, err := filter.Exists(options.bloomFilterOption.Key(), key)
-		if err != nil {
-			e = err
+		var exists bool
+		exists, e = filter.Exists(options.bloomFilterOption.Key(), key)
+		if e != nil {
+			e = newCacheError(e.Error())
 			return
 		}
 		if !exists {
 			_, e = filter.Add(options.bloomFilterOption.Key(), key)
 			if e != nil {
+				e = newCacheError(e.Error())
 				return
 			}
 		}
@@ -245,7 +263,15 @@ func CacheEvict(process func() (interface{}, error), cacheProvider CacheProvider
 	// r 返回值
 	// e 返回异常
 	r, e = process()
+	if e != nil {
+		return
+	}
+
 	e = cacheProvider.DeleteMulti(cacheKeys...)
+	if e != nil {
+		e = newCacheError(e.Error())
+		return
+	}
 	return
 }
 
