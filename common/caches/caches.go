@@ -73,7 +73,9 @@ func (b CacheBloomFilterOption) apply(cacheOption *cacheOption) {
 	cacheOption.bloomFilterOption = bloomfilter.BFOption(b)
 }
 
-type RedisCacheProvideOption RedisCache
+type RedisCacheProvideOption struct {
+	RedisCache *RedisCache
+}
 
 type ConditionFuncOption func() bool
 
@@ -82,8 +84,7 @@ func (c ConditionFuncOption) apply(cacheOption *cacheOption) {
 }
 
 func (c RedisCacheProvideOption) apply(cacheOption *cacheOption) {
-	provider := RedisCache(c)
-	cacheOption.cacheProvider = &provider
+	cacheOption.cacheProvider = c.RedisCache
 }
 
 type CacheExpiresOption time.Duration
@@ -92,10 +93,12 @@ func (e CacheExpiresOption) apply(cacheOption *cacheOption) {
 	cacheOption.expires = time.Duration(e)
 }
 
-type SerializerOption util.SerializeTool
+type SerializerOption struct {
+	Serializer *util.SerializeTool
+}
 
 func (s SerializerOption) apply(cacheOption *cacheOption) {
-	cacheOption.serializer = util.SerializeTool(s)
+	cacheOption.serializer = s.Serializer
 }
 
 type CacheSyncOption bool

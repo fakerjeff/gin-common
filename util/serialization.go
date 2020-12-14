@@ -18,7 +18,11 @@ type SerializeTool struct {
 	logger zap.Logger
 }
 
-func (t SerializeTool) Serialize(value interface{}) ([]byte, error) {
+func (t *SerializeTool) Init(logger zap.Logger) {
+	t.logger = logger
+}
+
+func (t *SerializeTool) Serialize(value interface{}) ([]byte, error) {
 	if data, ok := value.([]byte); ok {
 		return data, nil
 	}
@@ -39,7 +43,7 @@ func (t SerializeTool) Serialize(value interface{}) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func (t SerializeTool) Deserialize(byt []byte, ptr interface{}) (err error) {
+func (t *SerializeTool) Deserialize(byt []byte, ptr interface{}) (err error) {
 	if data, ok := ptr.(*[]byte); ok {
 		*data = byt
 		return

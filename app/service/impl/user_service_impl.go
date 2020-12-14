@@ -1,8 +1,18 @@
 package impl
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"time"
+
+	"com.github.gin-common/util"
+
+	"go.uber.org/zap"
+
+	"github.com/go-redis/redis/v8"
+
+	"com.github.gin-common/common/caches"
 
 	"com.github.gin-common/common/models"
 
@@ -15,10 +25,16 @@ import (
 
 type UserServiceImpl struct {
 	session *gorm.DB
+	rdb     *redis.Client
+	ctx     context.Context
+	logger  zap.Logger
 }
 
-func (service *UserServiceImpl) Init(session *gorm.DB) {
+func (service *UserServiceImpl) Init(session *gorm.DB, rdb *redis.Client, ctx context.Context, logger zap.Logger) {
 	service.session = session
+	service.rdb = rdb
+	service.ctx = ctx
+	service.logger = logger
 }
 
 func (service *UserServiceImpl) CreateUser(user *model.User, password string) (*model.User, error) {
@@ -91,6 +107,39 @@ func (service *UserServiceImpl) DeactivateUser(id uint) (*model.User, error) {
 }
 
 func (service *UserServiceImpl) GetUserInfoById(id uint) (*model.User, error) {
+	user := &model.User{}
+
+	bridge := func(process func(id uint) (*model.User, error), id uint) func() (interface{}, error) {
+		return func() (interface{}, error) {
+			user, err := process(id)
+			return user, err
+		}
+	}
+	redisCache := new(caches.RedisCache)
+	redisCache.Init(service.rdb, service.ctx)
+
+	redisCacheProvideOption := caches.RedisCacheProvideOption{
+		RedisCache: redisCache,
+	}
+	expiresOption := caches.CacheExpiresOption(5 * time.Minute)
+	tool := new(util.SerializeTool)
+	tool.Init(service.logger)
+
+	serializerOption := caches.SerializerOption{
+		Serializer: tool,
+	}
+	var err error
+	var result interface{}
+	result, err = caches.CacheEnable(bridge(service.getUserInfoById, id), user, caches.CacheKeyOption(fmt.Sprintf("user:%d", id)),
+		redisCacheProvideOption, expiresOption, serializerOption)
+	if err != nil {
+		return nil, err
+	}
+	user = result.(*model.User)
+	return user, nil
+}
+
+func (service *UserServiceImpl) getUserInfoById(id uint) (*model.User, error) {
 	user := &model.User{}
 	if result := service.session.Where("ID=?", id).Take(user); result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
